@@ -5,6 +5,7 @@ import re
 import numpy as np
 import altair as alt
 from pyod.models.knn import KNN
+from scipy.signal import savgol_filter
 
 
 @st.cache_data(max_entries=3, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.keys())})
@@ -210,13 +211,19 @@ def removing(well_data, k, q):
 
 
 @st.cache_data(max_entries=1, show_spinner="正在滤波...")
-def filtering(well_data):
+def filtering(well_data, window_length, polyorder):
     """
-    预处理之滤波
+    预处理之滤波，使用Savitzky-Golay滤波器
     :param well_data:
+    :param window_length:窗口长度，为奇数
+    :param polyorder:拟合的多项式阶数
     :return:
     """
-    pass
+    data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
+    # 对每一行使用Savitzky-Golay滤波器
+    for row_index, row in data.iterrows():
+        well_data.iloc[row_index, 1:] = savgol_filter(row.to_numpy(), window_length, polyorder)
+    return well_data
 
 
 @st.cache_data(max_entries=1, show_spinner="正在寻峰...")
