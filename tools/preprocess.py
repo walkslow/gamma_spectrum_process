@@ -4,6 +4,7 @@ import lasio
 import re
 import numpy as np
 import altair as alt
+from pyod.models.knn import KNN
 
 
 @st.cache_data(max_entries=3, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.keys())})
@@ -98,14 +99,7 @@ def get_well_data(real_data, well_name, channel_size, dept1, dept2):
     return well_data
 
 
-@st.cache_data(max_entries=5, persist=True, show_spinner="正在显示原始谱图...")
-def show_raw_spectrum(well_data, well_name, well_channel_size):
-    """
-    井名和深度范围确定后，展示原始谱图
-    :param well_data:为pd.DataFrame
-    :param well_name:
-    :param well_channel_size:
-    """
+def get_spectrum(well_data, well_channel_size):
     selected_data = well_data.iloc[:, 1:]  # well_data除了第一列的其他数据
     data = {
         'depth': np.repeat(well_data[well_data.columns[0]], well_channel_size),
@@ -123,7 +117,19 @@ def show_raw_spectrum(well_data, well_name, well_channel_size):
     ).facet(
         row='depth:N',  # 使用行面来区分不同的深度
     )
-    chart.title = alt.TitleParams(f"{well_name}在不同深度的谱图", anchor='middle')
+    return chart
+
+
+@st.cache_data(max_entries=5, persist=True, show_spinner="正在显示原始谱图...")
+def show_raw_spectrum(well_data, well_name, well_channel_size):
+    """
+    井名和深度范围确定后，展示原始谱图
+    :param well_data:为pd.DataFrame
+    :param well_name:
+    :param well_channel_size:
+    """
+    chart = get_spectrum(well_data, well_channel_size)
+    chart.title = alt.TitleParams(f"{well_name}在不同深度的原始谱图", anchor='middle')
     with st.container(height=300):
         st.altair_chart(chart)
 
@@ -167,92 +173,108 @@ def show_raw_gr(real_data):
                 st.altair_chart(chart)
 
 
-@st.cache_data(max_entries=1, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.data)},
-               show_spinner="正在剔除异常值...")
-def removing(std_data, real_data, dept1, dept2):
+@st.cache_data(max_entries=1, show_spinner="正在进行异常值检测与处理...")
+def removing(well_data, k, q):
     """
-    预处理之剔除异常值
-    :param std_data:
-    :param real_data:
-    :param dept1:
-    :param dept2:
-    :return:
+    预处理之异常值检测与处理，将异常值替换为左右正常值的平均值
+    :param well_data: 确认了深度范围的原始谱图数据，DataFrame格式
+    :param k:KNN算法的参数，即邻居的数量
+    :param q:用于确定阈值，表示异常值的异常分数高于百分之q的异常分数
+    :return:well_data
     """
-    pass
+    knn = KNN(n_neighbors=k)
+    data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
+    outliers_index = [None] * len(data)  # 列表元素为数组，保存每一行的异常值的列索引，列索引从1开始，因为第0列为深度列
+    for row_index, row in data.iterrows():
+        knn.fit(list(enumerate(row, 1)))
+        # 获取异常分数
+        scores = knn.decision_scores_
+        # 确定阈值
+        threshold = np.percentile(scores, q)
+        # 标记异常值的列索引
+        outliers_index[row_index] = np.where(scores > threshold)[0] + 1
+        # well_data.iloc[row_index, np.where(scores > threshold)[0]+1] = 0
+        # 异常值处理，将异常值转换为左右正常数据的平均值
+        for i in outliers_index[row_index]:
+            left_index = i - 1
+            right_index = i + 1
+            while left_index in outliers_index[row_index] and left_index > 0:
+                left_index = left_index - 1
+            while right_index in outliers_index[row_index] and right_index < well_data.shape[1]:
+                right_index = right_index + 1
+            left_value = well_data.iloc[row_index, left_index] if left_index != 0 else 0
+            right_value = well_data.iloc[row_index, right_index] if right_index != well_data.shape[1] else 0
+            well_data.iloc[row_index, i] = (left_value + right_value) / 2
+    # st.write(outliers_index)
+    return well_data
 
 
-@st.cache_data(max_entries=1, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.data)}, show_spinner="正在滤波...")
-def filtering(std_data, real_data, dept1, dept2):
+@st.cache_data(max_entries=1, show_spinner="正在滤波...")
+def filtering(well_data):
     """
     预处理之滤波
-    :param std_data:
-    :param real_data:
-    :param dept1:
-    :param dept2:
+    :param well_data:
     :return:
     """
     pass
 
 
-@st.cache_data(max_entries=1, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.data)}, show_spinner="正在寻峰...")
-def peak_detect(std_data, real_data, dept1, dept2):
+@st.cache_data(max_entries=1, show_spinner="正在寻峰...")
+def peak_detect(std_data, well_data):
     """
     预处理之寻峰
     :param std_data:
-    :param real_data:
-    :param dept1:
-    :param dept2:
+    :param well_data:
     :return:
     """
     pass
 
 
-@st.cache_data(max_entries=1, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.data)},
-               show_spinner="正在进行谱漂校正...")
-def drift_correct(std_data, real_data, dept1, dept2):
+@st.cache_data(max_entries=1, show_spinner="正在进行谱漂校正...")
+def drift_correct(std_data, well_data):
     """
     预处理之谱漂校正
     :param std_data:
-    :param real_data:
-    :param dept1:
-    :param dept2:
+    :param well_data:
     :return:
     """
     pass
 
 
-@st.cache_data(max_entries=1, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.data)},
-               show_spinner="正在进行分辨率校正...")
-def resolution_correct(std_data, real_data, dept1, dept2):
+@st.cache_data(max_entries=1, show_spinner="正在进行分辨率校正...")
+def resolution_correct(well_data):
     """
     预处理之分辨率校正
-    :param std_data:
-    :param real_data:
-    :param dept1:
-    :param dept2:
+    :param well_data:
     :return:
     """
     pass
 
 
-def prepro_func(func, std_data, real_data, dept1, dept2, checked):
+def prepro_func(func, checked, *args, **kwargs):
     """
     当checked为True时，执行func函数
     :param func:
-    :param std_data:
-    :param real_data:
-    :param dept1:
-    :param dept2:
     :param checked:
-    :return:
     """
     if checked:
-        func(std_data, real_data, dept1, dept2)
+        st.session_state.well_data2 = func(*args, **kwargs)
 
 
-def show_after_spectrum():
+@st.cache_data(max_entries=5, persist=True, show_spinner="正在显示处理后的谱图...")
+def show_after_spectrum(well_data, well_name, well_channel_size):
     """
     展示预处理过程中的谱图变化
-    :return:
     """
-    pass
+    chart = get_spectrum(well_data, well_channel_size)
+    if st.session_state.resolution_correct:
+        chart.title = alt.TitleParams(f"{well_name}分辨率校正后的谱图", anchor='middle')
+    elif st.session_state.drift_correct:
+        chart.title = alt.TitleParams(f"{well_name}谱漂校正后的谱图", anchor='middle')
+    elif st.session_state.peak_detect:
+        chart.title = alt.TitleParams(f"{well_name}寻峰后的谱图", anchor='middle')
+    elif st.session_state.filtering:
+        chart.title = alt.TitleParams(f"{well_name}滤波后的谱图", anchor='middle')
+    elif st.session_state.removing:
+        chart.title = alt.TitleParams(f"{well_name}异常值处理后的谱图", anchor='middle')
+    st.altair_chart(chart)

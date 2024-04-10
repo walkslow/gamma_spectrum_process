@@ -35,6 +35,9 @@ with st.form("dept_form"):
                                                           st.session_state.well_info['channel_size'],
                                                           st.session_state.real_dept1,
                                                           st.session_state.real_dept2)
+        # 当well_data确认之后，初始化预处理过程中的数据well_data2为well_data
+        st.session_state.well_data2 = st.session_state.well_data.copy()
+        mst.reset_preprocess_state()
     # 初始化时不显示谱图，在不改变实测谱数据文件的条件下初次提交深度范围后，下面条件永真，显示数据在相应深度范围的谱图
     if st.session_state.submitted:
         with st.expander("原始谱图在相应深度范围的具体数据表"):
@@ -73,37 +76,34 @@ st.divider()
 st.subheader("-预处理并输出预处理后的谱图")
 # 分别表示剔除异常值、滤波、寻峰、谱漂校正、分辨率校正
 removing, filtering, peak_detect, drift_correct, resolution_correct = st.columns(5)
-graph_space = st.empty()  # 在预处理过程中展示谱图
+graph_space = st.container(height=400)  # 在预处理过程中展示谱图
 
 with removing:
-    st.checkbox("剔除异常值", key='removing', disabled=not st.session_state.enable_prepro, on_change=prepro.prepro_func,
-                args=[prepro.removing, st.session_state.std_data, st.session_state.real_data,
-                      st.session_state.real_dept1,
-                      st.session_state.real_dept2, st.session_state.removing])
+    st.checkbox("异常值检测与处理", key='removing', disabled=not st.session_state.enable_prepro,
+                on_change=prepro.prepro_func,
+                args=[prepro.removing, not st.session_state.removing, st.session_state.well_data2, 5, 99])
 with filtering:
     st.checkbox("滤波", key='filtering', disabled=not st.session_state.removing, on_change=prepro.prepro_func,
-                args=[prepro.filtering, st.session_state.std_data, st.session_state.real_data,
-                      st.session_state.real_dept1,
-                      st.session_state.real_dept2, st.session_state.filtering])
+                args=[prepro.filtering, not st.session_state.filtering, st.session_state.well_data2])
 with peak_detect:
     st.checkbox("寻峰", key='peak_detect', disabled=not st.session_state.filtering, on_change=prepro.prepro_func,
-                args=[prepro.peak_detect, st.session_state.std_data, st.session_state.real_data,
-                      st.session_state.real_dept1,
-                      st.session_state.real_dept2, st.session_state.peak_detect])
+                args=[prepro.peak_detect, not st.session_state.peak_detect, st.session_state.std_data,
+                      st.session_state.well_data2])
 with drift_correct:
     st.checkbox("谱漂校正", key='drift_correct', disabled=not st.session_state.peak_detect,
                 on_change=prepro.prepro_func,
-                args=[prepro.drift_correct, st.session_state.std_data, st.session_state.real_data,
-                      st.session_state.real_dept1,
-                      st.session_state.real_dept2, st.session_state.drift_correct])
+                args=[prepro.drift_correct, not st.session_state.drift_correct, st.session_state.std_data,
+                      st.session_state.well_data2])
 with resolution_correct:
     st.checkbox("分辨率校正", key='resolution_correct', disabled=not st.session_state.drift_correct,
                 on_change=prepro.prepro_func,
-                args=[prepro.resolution_correct, st.session_state.std_data, st.session_state.real_data,
-                      st.session_state.real_dept1,
-                      st.session_state.real_dept2, st.session_state.resolution_correct])
+                args=[prepro.resolution_correct, not st.session_state.resolution_correct, st.session_state.well_data2])
 with graph_space:
-    prepro.show_after_spectrum()
+    if st.session_state.removing:
+        with st.expander("预处理过程中的谱图在相应深度范围的具体数据表"):
+            st.container(height=200).write(st.session_state.well_data2)
+        prepro.show_after_spectrum(st.session_state.well_data2, st.session_state.well_info['name'],
+                                   st.session_state.well_info['channel_size'])
 
 st.session_state.enable_interp = (st.session_state.removing and st.session_state.filtering
                                   and st.session_state.peak_detect and st.session_state.drift_correct

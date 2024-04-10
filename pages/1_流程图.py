@@ -13,7 +13,7 @@ elements = [{'id': 1, 'data': {'label': '准备(上传实测谱数据)'}, 'type'
              'style': {'width': 600, 'height': 150}},
             {'id': 3, 'data': {'label': '解谱计算'}, 'position': {'x': 250, 'y': 350}},
             {'id': 4, 'data': {'label': '反演'}, 'position': {'x': 250, 'y': 450}},
-            {'id': 5, 'data': {'label': '剔除异常值'}, 'position': {'x': 50, 'y': 200},
+            {'id': 5, 'data': {'label': '异常值检测与处理'}, 'position': {'x': 50, 'y': 200},
              'style': {'width': 90}, 'parentNode': 2, 'extent': 'parent'},
             {'id': 6, 'data': {'label': '滤波'}, 'position': {'x': 160, 'y': 200},
              'style': {'width': 90}, 'parentNode': 2, 'extent': 'parent'},

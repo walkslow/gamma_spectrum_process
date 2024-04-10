@@ -39,6 +39,9 @@ def init_session_state():
     # 探测器和深度范围确定后，保存选择处理的数据
     if "well_data" not in st.session_state:
         st.session_state.well_data = None
+    # 预处理过程中的数据，由于要与well_data进行比较，所以重新定义一个变量
+    if "well_data2" not in st.session_state:
+        st.session_state.well_data2 = None
     if "removing" not in st.session_state:
         st.session_state.removing = False
     if "filtering" not in st.session_state:
@@ -85,6 +88,22 @@ def reset_session_state():
     st.session_state.step_fake_dept = None
     st.session_state.submitted = False
     st.session_state.well_data = None
+    st.session_state.well_data2 = None
+    st.session_state.removing = False
+    st.session_state.filtering = False
+    st.session_state.peak_detect = False
+    st.session_state.drift_correct = False
+    st.session_state.resolution_correct = False
+    st.session_state.enable_interp = None
+    st.session_state.output = None
+    st.session_state.have_interpreted = False
+    st.session_state.inv_real = None
+
+
+def reset_preprocess_state():
+    """
+    当修改深度范围后再次点击form_submit_button时，将预处理及
+    """
     st.session_state.removing = False
     st.session_state.filtering = False
     st.session_state.peak_detect = False
