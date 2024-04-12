@@ -87,8 +87,7 @@ with filtering:
                 args=[prepro.filtering, not st.session_state.filtering, st.session_state.well_data2, 5, 2])
 with peak_detect:
     st.checkbox("寻峰", key='peak_detect', disabled=not st.session_state.filtering, on_change=prepro.prepro_func,
-                args=[prepro.peak_detect, not st.session_state.peak_detect, st.session_state.std_data,
-                      st.session_state.well_data2])
+                args=[prepro.peak_detect, not st.session_state.peak_detect, st.session_state.well_data2])
 with drift_correct:
     st.checkbox("谱漂校正", key='drift_correct', disabled=not st.session_state.peak_detect,
                 on_change=prepro.prepro_func,
@@ -104,7 +103,7 @@ with graph_space:
             st.container(height=200).write(st.session_state.well_data2)
         prepro.show_after_spectrum(st.session_state.well_data2, st.session_state.well_info['name'],
                                    st.session_state.well_info['channel_size'])
-    st.write("st.session_state.filtering:",st.session_state.filtering)
+        st.write("peaks:", st.session_state.peaks)
 
 st.session_state.enable_interp = (st.session_state.removing and st.session_state.filtering
                                   and st.session_state.peak_detect and st.session_state.drift_correct

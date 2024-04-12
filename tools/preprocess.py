@@ -6,6 +6,7 @@ import numpy as np
 import altair as alt
 from pyod.models.knn import KNN
 from scipy.signal import savgol_filter
+from tools.tools_findpeak import get_peak
 
 
 @st.cache_data(max_entries=3, hash_funcs={lasio.las.LASFile: lambda las: tuple(las.keys())})
@@ -66,7 +67,7 @@ def generate_list(x, step, y):
                show_spinner="正在获取对应深度范围的数据")
 def get_well_data(real_data, well_name, channel_size, dept1, dept2):
     """
-    从完整的实测谱数据中提取相应深度的数据
+    从完整的实测谱数据中提取相应深度的数据，并初始化各个深度的三个峰位为0
     :param real_data:
     :param well_name:
     :param channel_size:
@@ -111,7 +112,8 @@ def get_spectrum(well_data, well_channel_size):
     # 创建图表
     chart = alt.Chart(df).mark_line().encode(
         x='channel:N',
-        y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[])),  # y轴为 counts，并不显示标题和刻度
+        # y轴counts为log轴，并不显示标题和刻度
+        y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]), scale=alt.Scale(type='log'))
     ).properties(
         width=600,  # 设置图表宽度为600像素
         height=50  # 设置图表高度为50像素
@@ -227,14 +229,32 @@ def filtering(well_data, window_length, polyorder):
 
 
 @st.cache_data(max_entries=1, show_spinner="正在寻峰...")
-def peak_detect(std_data, well_data):
+def peak_detect(well_data):
     """
-    预处理之寻峰
-    :param std_data:
+    预处理之寻峰，寻峰之前先将不同深度点按一定权重叠加
     :param well_data:
     :return:
     """
-    pass
+    data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
+    max_index = len(data) - 1
+    # 深度点前后5个叠加深度点的权重，其本身权重为1
+    weight = [0.98, 0.955, 0.9, 0.85, 0.775]
+    for row_index, row in data.iterrows():
+        for i, w in enumerate(weight, 1):
+            if row_index - i >= 0:
+                well_data.iloc[row_index, 1:] += data.iloc[row_index - i, :] * w
+            if row_index + i <= max_index:
+                well_data.iloc[row_index, 1:] += data.iloc[row_index + i, :] * w
+    # 寻峰
+    data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
+    std_peaks = [112, 134, 197]  # K、U、Th在标准谱中的峰位
+    m = 20  # 寻峰范围
+    peaks = np.zeros((len(data), 3))  # 峰位初始化为0
+    for row_index, row in data.iterrows():
+        for i in range(len(std_peaks)):
+            peak = get_peak(row, (std_peaks[i] - m, std_peaks[i] + m))[2]
+            peaks[row_index, i] = peak if 0 < peak < st.session_state.well_info["channel_size"] else None
+    return well_data, peaks
 
 
 @st.cache_data(max_entries=1, show_spinner="正在进行谱漂校正...")
@@ -265,7 +285,11 @@ def prepro_func(func, checked, *args, **kwargs):
     :param checked:
     """
     if checked:
-        st.session_state.well_data2 = func(*args, **kwargs)
+        result = func(*args, **kwargs)
+        if isinstance(result, tuple):
+            st.session_state.well_data2, st.session_state.peaks = result
+        else:
+            st.session_state.well_data2 = result
 
 
 @st.cache_data(max_entries=5, persist=True, show_spinner="正在显示处理后的谱图...")

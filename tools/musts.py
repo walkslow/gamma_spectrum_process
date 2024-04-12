@@ -1,4 +1,5 @@
 import streamlit as st
+import numpy as np
 
 
 def init_session_state():
@@ -48,6 +49,9 @@ def init_session_state():
         st.session_state.filtering = False
     if "peak_detect" not in st.session_state:
         st.session_state.peak_detect = False
+    # 保存每个深度点的三个峰位
+    if "peaks" not in st.session_state:
+        st.session_state.peaks = None
     if "drift_correct" not in st.session_state:
         st.session_state.drift_correct = False
     if "resolution_correct" not in st.session_state:
@@ -92,6 +96,7 @@ def reset_session_state():
     st.session_state.removing = False
     st.session_state.filtering = False
     st.session_state.peak_detect = False
+    st.session_state.peaks = None
     st.session_state.drift_correct = False
     st.session_state.resolution_correct = False
     st.session_state.enable_interp = None
@@ -102,11 +107,13 @@ def reset_session_state():
 
 def reset_preprocess_state():
     """
-    当修改深度范围后再次点击form_submit_button时，将预处理及
+    当修改深度范围后再次点击form_submit_button时，将预处理及之后过程中的部分session_state重置
     """
     st.session_state.removing = False
     st.session_state.filtering = False
     st.session_state.peak_detect = False
+    # 各个深度点的3个峰位，初始化为0
+    st.session_state.peaks = np.zeros((len(st.session_state.well_data), 3))
     st.session_state.drift_correct = False
     st.session_state.resolution_correct = False
     st.session_state.enable_interp = None
