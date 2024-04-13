@@ -6,6 +6,8 @@ def init_session_state():
     # 保存标准谱数据
     if "std_data" not in st.session_state:
         st.session_state.std_data = None
+    if "std_peaks" not in st.session_state:
+        st.session_state.std_peaks = None
     # 表示实测谱文件是否已经被上传
     if "enable_transform" not in st.session_state:
         st.session_state.enable_transform = None

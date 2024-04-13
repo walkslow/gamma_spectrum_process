@@ -5,7 +5,6 @@ from scipy.optimize import curve_fit
 import numpy as np
 
 
-
 def arpls(y, lam=1e4, ratio=0.05, itermax=100):
     """
     返回能谱图的基线水平

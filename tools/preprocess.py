@@ -102,6 +102,7 @@ def get_well_data(real_data, well_name, channel_size, dept1, dept2):
 
 
 def get_spectrum(well_data, well_channel_size):
+    # st.write("get_spectrum函数里面的well_data是：",well_data)
     selected_data = well_data.iloc[:, 1:]  # well_data除了第一列的其他数据
     data = {
         'depth': np.repeat(well_data[well_data.columns[0]], well_channel_size),
@@ -109,11 +110,12 @@ def get_spectrum(well_data, well_channel_size):
         'counts': pd.concat([selected_data.iloc[i] for i in range(len(selected_data))], axis=0).to_numpy()
     }
     df = pd.DataFrame(data)
+    # st.write("get_spectrum函数里面图表原data是：", df)
     # 创建图表
     chart = alt.Chart(df).mark_line().encode(
         x='channel:N',
         # y轴counts为log轴，并不显示标题和刻度
-        y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]), scale=alt.Scale(type='log'))
+        y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]))
     ).properties(
         width=600,  # 设置图表宽度为600像素
         height=50  # 设置图表高度为50像素
@@ -131,6 +133,7 @@ def show_raw_spectrum(well_data, well_name, well_channel_size):
     :param well_name:
     :param well_channel_size:
     """
+    # st.write("show_raw_spectrum函数里面的well_data为：",well_data)
     chart = get_spectrum(well_data, well_channel_size)
     chart.title = alt.TitleParams(f"{well_name}在不同深度的原始谱图", anchor='middle')
     with st.container(height=300):
@@ -233,7 +236,8 @@ def peak_detect(well_data):
     """
     预处理之寻峰，寻峰之前先将不同深度点按一定权重叠加
     :param well_data:
-    :return:
+    :return:(well_data,peaks):well_data为将不同深度点按一定权重叠加后的数据，
+    peaks为每一个深度点的峰位，每个深度点都有3个峰位，分别为K、U、Th，如果没有寻到峰，则置None
     """
     data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
     max_index = len(data) - 1
@@ -247,25 +251,56 @@ def peak_detect(well_data):
                 well_data.iloc[row_index, 1:] += data.iloc[row_index + i, :] * w
     # 寻峰
     data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
-    std_peaks = [112, 134, 197]  # K、U、Th在标准谱中的峰位
     m = 20  # 寻峰范围
     peaks = np.zeros((len(data), 3))  # 峰位初始化为0
     for row_index, row in data.iterrows():
-        for i in range(len(std_peaks)):
-            peak = get_peak(row, (std_peaks[i] - m, std_peaks[i] + m))[2]
-            peaks[row_index, i] = peak if 0 < peak < st.session_state.well_info["channel_size"] else None
+        for i in range(len(st.session_state.std_peaks)):
+            peak = get_peak(row, (st.session_state.std_peaks[i] - m, st.session_state.std_peaks[i] + m))[2]
+            # 注意，下面未寻到的峰位 置为None会被解释为np.nan
+            peaks[row_index, i] = peak if 0 < peak < st.session_state.well_info["channel_size"] else np.nan
     return well_data, peaks
 
 
 @st.cache_data(max_entries=1, show_spinner="正在进行谱漂校正...")
-def drift_correct(std_data, well_data):
+def drift_correct(std_peaks, real_peaks, step, well_data):
     """
     预处理之谱漂校正
-    :param std_data:
+    :param std_peaks:标准谱峰位
+    :param real_peaks:实测谱峰位
+    :param step:搜索步长
     :param well_data:
     :return:
     """
-    pass
+    data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
+    channel_size = data.shape[1]
+    for row_index, row in data.iterrows():
+        # 保存实测谱寻到的峰的索引
+        real_peak_indices = []
+        for i, peak in enumerate(real_peaks[row_index, :], 0):
+            if not np.isnan(peak):
+                real_peak_indices.append(i)
+        # 当实测谱没有寻到峰或只寻到一个峰时，我们不进行谱漂校正
+        if len(real_peak_indices) <= 1:
+            continue
+        real_peak_indices = np.array(real_peak_indices)
+        # st.write("real_peak_indices:",real_peak_indices)
+        # st.write("std_peaks[real_peak_indices]:", std_peaks[real_peak_indices])
+        # st.write("real_peaks[row_index, real_peak_indices]:", real_peaks[row_index, real_peak_indices])
+        param = np.polyfit(std_peaks[real_peak_indices], real_peaks[row_index, real_peak_indices], 1)  # 拟合系数
+        # st.write("拟合系数：", param)
+        func = np.poly1d(param)  # 拟合函数
+        new_spectrum = np.zeros(channel_size)  # 保存每个深度点谱漂校正之后的计数值
+        for i in range(channel_size):
+            channel_left = func(i)  # 谱漂校正之前的低能道址
+            channel_right = func(i + 1)  # 谱漂校正之前的高能道址
+            left_bond = 0 if channel_left < 0 else channel_left
+            right_bond = channel_size - 1 if channel_right > channel_size - 1 else channel_right
+            position = left_bond
+            while position < right_bond:
+                new_spectrum[i] += step * row[int(position)]
+                position += step
+        well_data.iloc[row_index, 1:] = new_spectrum
+    return well_data
 
 
 @st.cache_data(max_entries=1, show_spinner="正在进行分辨率校正...")
