@@ -9,6 +9,7 @@ st.set_page_config(page_title='伽马能谱解析平台', layout='wide')
 mst.init_session_state()
 mst.interrupt_widget_clean_up()
 
+st.session_state.enable_interp = True  # 测试用
 st.write("enable_interp:", st.session_state.enable_interp)
 
 if st.toggle("输出产额", disabled=not st.session_state.enable_interp):

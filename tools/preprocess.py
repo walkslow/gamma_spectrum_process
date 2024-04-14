@@ -261,7 +261,7 @@ def peak_detect(well_data):
 
 
 @st.cache_data(max_entries=1, show_spinner="正在进行谱漂校正...")
-def drift_correct(std_peaks, real_peaks, step, well_data):
+def drift_correct(std_peaks, real_peaks, well_data):
     """
     预处理之谱漂校正
     :param std_peaks:标准谱峰位
@@ -294,11 +294,21 @@ def drift_correct(std_peaks, real_peaks, step, well_data):
             channel_left = func(i)  # 谱漂校正之前的低能道址
             channel_right = func(i + 1)  # 谱漂校正之前的高能道址
             left_bond = 0 if channel_left < 0 else channel_left
+            left_bond = channel_size - 1 if left_bond > channel_size - 1 else left_bond
             right_bond = channel_size - 1 if channel_right > channel_size - 1 else channel_right
-            position = left_bond
-            while position < right_bond:
-                new_spectrum[i] += step * row[int(position)]
-                position += step
+            right_bond = 0 if right_bond < 0 else right_bond
+            left_int = int(left_bond)
+            right_int = int(right_bond)
+            value1 = (1 - (left_bond - left_int)) * row[left_int]
+            value2 = (right_bond - right_int) * row[right_int]
+            value3 = 0
+            if right_int - left_int > 1:
+                value3 = sum(row[j] for j in range(left_int + 1, right_int))
+            elif right_int - left_int == 1:
+                value3 = 0
+            elif right_int - left_int == 0:
+                value3 = -row[left_int]
+            new_spectrum[i] = value1 + value2 + value3
         well_data.iloc[row_index, 1:] = new_spectrum
     return well_data
 

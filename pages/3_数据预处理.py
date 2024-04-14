@@ -92,7 +92,7 @@ with drift_correct:
     st.checkbox("谱漂校正", key='drift_correct', disabled=not st.session_state.peak_detect,
                 on_change=prepro.prepro_func,
                 args=[prepro.drift_correct, not st.session_state.drift_correct, st.session_state.std_peaks,
-                      st.session_state.peaks, 1e-4, st.session_state.well_data2])
+                      st.session_state.peaks, st.session_state.well_data2])
 with resolution_correct:
     st.checkbox("分辨率校正", key='resolution_correct', disabled=not st.session_state.drift_correct,
                 on_change=prepro.prepro_func,
@@ -109,4 +109,3 @@ with graph_space:
 st.session_state.enable_interp = (st.session_state.removing and st.session_state.filtering
                                   and st.session_state.peak_detect and st.session_state.drift_correct
                                   and st.session_state.resolution_correct)
-
