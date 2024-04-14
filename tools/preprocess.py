@@ -114,7 +114,6 @@ def get_spectrum(well_data, well_channel_size):
     # 创建图表
     chart = alt.Chart(df).mark_line().encode(
         x='channel:N',
-        # y轴counts为log轴，并不显示标题和刻度
         y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]))
     ).properties(
         width=600,  # 设置图表宽度为600像素
@@ -282,6 +281,7 @@ def drift_correct(std_peaks, real_peaks, step, well_data):
         # 当实测谱没有寻到峰或只寻到一个峰时，我们不进行谱漂校正
         if len(real_peak_indices) <= 1:
             continue
+        # numpy数组不能使用列表进行索引，所以将real_peak_indices先转换为numpy数组
         real_peak_indices = np.array(real_peak_indices)
         # st.write("real_peak_indices:",real_peak_indices)
         # st.write("std_peaks[real_peak_indices]:", std_peaks[real_peak_indices])

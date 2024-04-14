@@ -103,10 +103,10 @@ with graph_space:
             st.container(height=200).write(st.session_state.well_data2)
         prepro.show_after_spectrum(st.session_state.well_data2, st.session_state.well_info['name'],
                                    st.session_state.well_info['channel_size'])
-        st.write("peaks:", st.session_state.peaks)
-        st.write("std_peaks:", st.session_state.std_peaks)
-        st.write("std_data is None?:", st.session_state.std_data is None)
+        # st.write("peaks:", st.session_state.peaks)
+        # st.write("std_peaks:", st.session_state.std_peaks)
 
 st.session_state.enable_interp = (st.session_state.removing and st.session_state.filtering
                                   and st.session_state.peak_detect and st.session_state.drift_correct
                                   and st.session_state.resolution_correct)
+

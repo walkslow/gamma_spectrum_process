@@ -64,9 +64,9 @@ def init_session_state():
         st.session_state.output = None
     if "have_interpreted" not in st.session_state:
         st.session_state.have_interpreted = False
-    # 反演得出的实测谱
-    if "inv_real" not in st.session_state:
-        st.session_state.inv_real = None
+    # 误差分析得出的实测谱，后续需要与处理后的用户上传的实测谱进行对比
+    if "err_real" not in st.session_state:
+        st.session_state.err_real = None
 
 
 def interrupt_widget_clean_up():
@@ -104,7 +104,7 @@ def reset_session_state():
     st.session_state.enable_interp = None
     st.session_state.output = None
     st.session_state.have_interpreted = False
-    st.session_state.inv_real = None
+    st.session_state.err_real = None
 
 
 def reset_preprocess_state():
@@ -121,7 +121,7 @@ def reset_preprocess_state():
     st.session_state.enable_interp = None
     st.session_state.output = None
     st.session_state.have_interpreted = False
-    st.session_state.inv_real = None
+    st.session_state.err_real = None
 
 
 def show_session_state():
