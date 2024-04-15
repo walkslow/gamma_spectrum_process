@@ -9,9 +9,9 @@ mst.interrupt_widget_clean_up()
 
 st.write("st.session_state.have_interpreted:", st.session_state.have_interpreted)
 
-show_contrast = st.toggle("输出对比图", disabled=not st.session_state.have_interpreted)
-container = st.container()
-show_error = st.toggle("输出误差", disabled=not show_contrast)
+show_contrast = st.toggle("输出对比图", disabled=not st.session_state.have_interpreted, key="tog_contrast")
+container = st.container(height=400)
+show_error = st.toggle("输出误差", disabled=not show_contrast, key="tog_error")
 with container:
     if show_contrast:
         st.session_state.err_real = err.show_contrast(st.session_state.std_data, st.session_state.well_data2,

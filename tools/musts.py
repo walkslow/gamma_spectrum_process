@@ -79,6 +79,12 @@ def interrupt_widget_clean_up():
     st.session_state.peak_detect = st.session_state.peak_detect
     st.session_state.drift_correct = st.session_state.drift_correct
     st.session_state.resolution_correct = st.session_state.resolution_correct
+    if "tog_interp" in st.session_state:
+        st.session_state.tog_interp = st.session_state.tog_interp
+    if "tog_contrast" in st.session_state:
+        st.session_state.tog_contrast = st.session_state.tog_contrast
+    if "tog_error" in st.session_state:
+        st.session_state.tog_error = st.session_state.tog_error
 
 
 def reset_session_state():

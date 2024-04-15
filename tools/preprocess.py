@@ -67,7 +67,7 @@ def generate_list(x, step, y):
                show_spinner="正在获取对应深度范围的数据")
 def get_well_data(real_data, well_name, channel_size, dept1, dept2):
     """
-    从完整的实测谱数据中提取相应深度的数据，并初始化各个深度的三个峰位为0
+    从完整的实测谱数据中提取相应深度的数据
     :param real_data:
     :param well_name:
     :param channel_size:
@@ -93,7 +93,7 @@ def get_well_data(real_data, well_name, channel_size, dept1, dept2):
     elif re.search('\.(xlsx|xls)$', st.session_state.f_real.name):
         dept_list = generate_list(dept1, st.session_state.step_fake_dept, dept2)
         dept_list = dept_list[:len(real_data)] if len(dept_list) > len(real_data) else dept_list  # 不包含第len(real_data)列
-        data1 = real_data.loc[:len(dept_list) - 1]  # 包含第len(dept_list) - 1 列
+        data1 = real_data.loc[:len(dept_list) - 1]  # 包含第len(dept_list) - 1 行
         data2 = pd.DataFrame(dept_list, columns=['DEPT'])
 
     # 由于data1和data2的索引可能不同，一个是深度索引，一个是自然索引，且自然索引可能不是从0开始，所以需要重置自然索引并丢弃原来的索引再合并
