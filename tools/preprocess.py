@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import streamlit as st
 import lasio
@@ -114,7 +116,7 @@ def get_spectrum(well_data, well_channel_size):
     # 创建图表
     chart = alt.Chart(df).mark_line().encode(
         x='channel:N',
-        y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]))
+        y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]), scale=alt.Scale(type='symlog'))
     ).properties(
         width=600,  # 设置图表宽度为600像素
         height=50  # 设置图表高度为50像素
@@ -187,6 +189,7 @@ def removing(well_data, k, q):
     :param q:用于确定阈值，表示异常值的异常分数高于百分之q的异常分数
     :return:well_data
     """
+    well_data.clip(lower=0, inplace=True)  # 将小于0的值置为0
     knn = KNN(n_neighbors=k)
     data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
     outliers_index = [None] * len(data)  # 列表元素为数组，保存每一行的异常值的列索引，列索引从1开始，因为第0列为深度列
@@ -238,6 +241,7 @@ def peak_detect(well_data):
     :return:(well_data,peaks):well_data为将不同深度点按一定权重叠加后的数据，
     peaks为每一个深度点的峰位，每个深度点都有3个峰位，分别为K、U、Th，如果没有寻到峰，则置None
     """
+    well_data.clip(lower=0, inplace=True)  # 将小于0的值置为0
     data = well_data.iloc[:, 1:]  # 去除了深度列的谱数据
     max_index = len(data) - 1
     # 深度点前后5个叠加深度点的权重，其本身权重为1
@@ -254,7 +258,7 @@ def peak_detect(well_data):
     peaks = np.zeros((len(data), 3))  # 峰位初始化为0
     for row_index, row in data.iterrows():
         for i in range(len(st.session_state.std_peaks)):
-            peak = get_peak(row, (st.session_state.std_peaks[i] - m, st.session_state.std_peaks[i] + m))[2]
+            peak = get_peak(row.copy(), (st.session_state.std_peaks[i] - m, st.session_state.std_peaks[i] + m))[2]
             # 注意，下面未寻到的峰位 置为None会被解释为np.nan
             peaks[row_index, i] = peak if 0 < peak < st.session_state.well_info["channel_size"] else np.nan
     return well_data, peaks
@@ -263,10 +267,9 @@ def peak_detect(well_data):
 @st.cache_data(max_entries=1, show_spinner="正在进行谱漂校正...")
 def drift_correct(std_peaks, real_peaks, well_data):
     """
-    预处理之谱漂校正
+    预处理之谱漂校正，选择K和Th的峰位对实测谱进行谱漂校正
     :param std_peaks:标准谱峰位
     :param real_peaks:实测谱峰位
-    :param step:搜索步长
     :param well_data:
     :return:
     """
@@ -279,10 +282,15 @@ def drift_correct(std_peaks, real_peaks, well_data):
             if not np.isnan(peak):
                 real_peak_indices.append(i)
         # 当实测谱没有寻到峰或只寻到一个峰时，我们不进行谱漂校正
-        if len(real_peak_indices) <= 1:
+        # if len(real_peak_indices) <= 1:
+        #     continue
+        # 当K和Th峰未寻到时，我们不进行谱漂校正
+        if not (0 in real_peak_indices and 2 in real_peak_indices):
             continue
         # numpy数组不能使用列表进行索引，所以将real_peak_indices先转换为numpy数组
-        real_peak_indices = np.array(real_peak_indices)
+        # real_peak_indices = np.array(real_peak_indices)
+        # K峰和Th峰的索引分别为0和2
+        real_peak_indices = np.array([0, 2])
         # st.write("real_peak_indices:",real_peak_indices)
         # st.write("std_peaks[real_peak_indices]:", std_peaks[real_peak_indices])
         # st.write("real_peaks[row_index, real_peak_indices]:", real_peaks[row_index, real_peak_indices])
@@ -314,13 +322,47 @@ def drift_correct(std_peaks, real_peaks, well_data):
 
 
 @st.cache_data(max_entries=1, show_spinner="正在进行分辨率校正...")
-def resolution_correct(well_data):
+def resolution_correct(std_data, well_data):
     """
-    预处理之分辨率校正
+    预处理之分辨率校正，对标准谱进行分辨率校正，然后对标准谱和实测谱进行归一化处理
+    :param std_data:
     :param well_data:
     :return:
     """
-    pass
+    # 对标准谱进行分辨率校正
+    D0 = 0.00015
+    D1 = 0.0001
+    D2 = 0.05
+    channel_size = len(std_data)
+    for i in range(channel_size):
+        # 将小于0的能量值视为0
+        if std_data.iloc[i, 0] < 0:
+            std_data.iloc[i, 0] = 0
+        # else:
+        #     st.session_state.std_data.iloc[i, 0] *= 1e-2
+    D = np.zeros(channel_size)
+    for i in range(channel_size):
+        D[i] = D0 + D1 * std_data.iloc[i, 0] + (D2 * std_data.iloc[i, 0]) ** 2
+    correct = np.zeros((channel_size, channel_size))
+    for i in range(channel_size):
+        for j in range(channel_size):
+            correct[i, j] = 1 / (math.sqrt(2 * math.pi) * D[i]) * math.exp(
+                -(std_data.iloc[j, 0] - std_data.iloc[i, 0]) ** 2 / (2 * D[i] ** 2))
+    # st.write("256x256矩阵：", correct)
+    raw_std_data = std_data.iloc[:, 1:].copy()
+    std_data.iloc[:, 1:] = correct.dot(std_data.iloc[:, 1:])
+    # 对标准谱进行归一化
+    for label in std_data.iloc[:, 1:].columns:
+        sum_counts = sum(std_data[label])
+        raw_sum_counts = sum(raw_std_data[label])
+        std_data[label] = std_data[label] / sum_counts * raw_sum_counts
+    # 对实测谱进行归一化
+    well_data.clip(lower=0, inplace=True)  # 将小于0的值置为0
+    # for row_index, row in well_data.iloc[:, 1:].iterrows():
+    #     sum_counts = sum(row)
+    #     row /= sum_counts
+    #     well_data.iloc[row_index, 1:] = row
+    return std_data, well_data
 
 
 def prepro_func(func, checked, *args, **kwargs):
@@ -331,8 +373,11 @@ def prepro_func(func, checked, *args, **kwargs):
     """
     if checked:
         result = func(*args, **kwargs)
-        if isinstance(result, tuple):
+        func_name = func.__name__
+        if func_name == 'peak_detect':
             st.session_state.well_data2, st.session_state.peaks = result
+        elif func_name == 'resolution_correct':
+            st.session_state.std_data, st.session_state.well_data2 = result
         else:
             st.session_state.well_data2 = result
 

@@ -96,15 +96,20 @@ with drift_correct:
 with resolution_correct:
     st.checkbox("分辨率校正", key='resolution_correct', disabled=not st.session_state.drift_correct,
                 on_change=prepro.prepro_func,
-                args=[prepro.resolution_correct, not st.session_state.resolution_correct, st.session_state.well_data2])
+                args=[prepro.resolution_correct, not st.session_state.resolution_correct, st.session_state.std_data,
+                      st.session_state.well_data2])
 with graph_space:
     if st.session_state.removing:
         with st.expander("预处理过程中的谱图在相应深度范围的具体数据表"):
             st.container(height=200).write(st.session_state.well_data2)
+        with st.expander("峰位数据"):
+            cols = st.columns(2)
+            with cols[0]:
+                st.write("实测谱峰位peaks:", st.session_state.peaks)
+            with cols[1]:
+                st.write("标准谱峰位std_peaks:", st.session_state.std_peaks)
         prepro.show_after_spectrum(st.session_state.well_data2, st.session_state.well_info['name'],
                                    st.session_state.well_info['channel_size'])
-        # st.write("peaks:", st.session_state.peaks)
-        # st.write("std_peaks:", st.session_state.std_peaks)
 
 st.session_state.enable_interp = (st.session_state.removing and st.session_state.filtering
                                   and st.session_state.peak_detect and st.session_state.drift_correct

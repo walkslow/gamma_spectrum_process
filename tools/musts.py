@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 import numpy as np
 
@@ -5,9 +6,9 @@ import numpy as np
 def init_session_state():
     # 保存标准谱数据
     if "std_data" not in st.session_state:
-        st.session_state.std_data = None
+        st.session_state.std_data = pd.read_excel("K、Th、U标准谱数据.xlsx")
     if "std_peaks" not in st.session_state:
-        st.session_state.std_peaks = None
+        st.session_state.std_peaks = np.array([117, 140, 207])
     # 表示实测谱文件是否已经被上传
     if "enable_transform" not in st.session_state:
         st.session_state.enable_transform = None
