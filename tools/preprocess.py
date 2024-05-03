@@ -103,12 +103,21 @@ def get_well_data(real_data, well_name, channel_size, dept1, dept2):
     return well_data
 
 
-def get_spectrum(well_data, well_channel_size):
+def get_spectrum(well_data, well_channel_size, *, depth_counts=-1):
+    """
+    获得要展示的altair谱图的chart图表对象
+    :param well_data: 谱图数据
+    :param well_channel_size: 能道数
+    :param depth_counts: 要展示的深度点个数，默认-1表示well_data的所有深度点
+    :return:
+    """
     # st.write("get_spectrum函数里面的well_data是：",well_data)
-    selected_data = well_data.iloc[:, 1:]  # well_data除了第一列的其他数据
+    if depth_counts == -1 or depth_counts > len(well_data):
+        depth_counts = len(well_data)
+    selected_data = well_data.iloc[:depth_counts, 1:]
     data = {
-        'depth': np.repeat(well_data[well_data.columns[0]], well_channel_size),
-        'channel': np.tile(range(1, well_channel_size + 1), len(well_data)),
+        'depth': np.repeat(well_data.iloc[:depth_counts, 0], well_channel_size),
+        'channel': np.tile(range(1, well_channel_size + 1), len(selected_data)),
         'counts': pd.concat([selected_data.iloc[i] for i in range(len(selected_data))], axis=0).to_numpy()
     }
     df = pd.DataFrame(data)
@@ -383,11 +392,16 @@ def prepro_func(func, checked, *args, **kwargs):
 
 
 @st.cache_data(max_entries=5, persist=True, show_spinner="正在显示处理后的谱图...")
-def show_after_spectrum(well_data, well_name, well_channel_size):
+def show_after_spectrum(well_data, well_name, well_channel_size, *, depth_counts=-1):
     """
     展示预处理过程中的谱图变化
+    :param well_data:
+    :param well_name:
+    :param well_channel_size:
+    :param depth_counts: 显示的深度点个数，默认为-1，表示将well_data的所有深度点的谱图都显示出来
+    :return:
     """
-    chart = get_spectrum(well_data, well_channel_size)
+    chart = get_spectrum(well_data, well_channel_size, depth_counts=depth_counts)
     if st.session_state.resolution_correct:
         chart.title = alt.TitleParams(f"{well_name}分辨率校正后的谱图", anchor='middle')
     elif st.session_state.drift_correct:

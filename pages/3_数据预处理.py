@@ -109,7 +109,7 @@ with graph_space:
             with cols[1]:
                 st.write("标准谱峰位std_peaks:", st.session_state.std_peaks)
         prepro.show_after_spectrum(st.session_state.well_data2, st.session_state.well_info['name'],
-                                   st.session_state.well_info['channel_size'])
+                                   st.session_state.well_info['channel_size'], depth_counts=-1)
 
 st.session_state.enable_interp = (st.session_state.removing and st.session_state.filtering
                                   and st.session_state.peak_detect and st.session_state.drift_correct
