@@ -13,7 +13,7 @@ st.set_page_config(page_title='伽马能谱解析平台', layout='wide')
 mst.init_session_state()
 mst.interrupt_widget_clean_up()
 
-st.write("st.session_state.have_interpreted:", st.session_state.have_interpreted)
+# st.write("st.session_state.have_interpreted:", st.session_state.have_interpreted)
 
 show_contrast = st.toggle("输出对比图", disabled=not st.session_state.have_interpreted, key="tog_contrast")
 container = st.container(height=400)

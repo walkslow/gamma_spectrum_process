@@ -10,7 +10,7 @@ mst.init_session_state()
 mst.interrupt_widget_clean_up()
 
 # st.session_state.enable_interp = True  # 测试用
-st.write("enable_interp:", st.session_state.enable_interp)
+# st.write("enable_interp:", st.session_state.enable_interp)
 
 if st.toggle("输出产额", disabled=not st.session_state.enable_interp, key='tog_interp'):
     st.session_state.output = interp.get_output(st.session_state.std_data, st.session_state.well_data2,

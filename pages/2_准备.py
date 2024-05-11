@@ -18,4 +18,4 @@ if _f_real is not None:
 st.write("您上传的实测谱文件为：", st.session_state.f_real.name if st.session_state.f_real else None)
 st.session_state.enable_transform = st.session_state.f_real is not None
 
-st.write("st.session_state.enable_transform =", st.session_state.enable_transform)  # 测试用
+# st.write("st.session_state.enable_transform =", st.session_state.enable_transform)  # 测试用

@@ -8,7 +8,7 @@ st.set_page_config(page_title='伽马能谱解析平台', layout='wide')
 mst.init_session_state()
 mst.interrupt_widget_clean_up()
 
-st.write("enable_transform=", st.session_state.enable_transform)
+# st.write("enable_transform=", st.session_state.enable_transform)
 st.session_state.enable_choose = st.session_state.enable_transform
 
 if st.session_state.f_real is not None and re.search('\.(las|LAS)$', st.session_state.f_real.name):
