@@ -34,7 +34,7 @@ def show_contrast(std_data, well_data, output, *, start_interp=1, depth_counts=-
     }
     df = pd.DataFrame(data)
     chart = alt.Chart(df).mark_line().encode(
-        x='channel:N',
+        x=alt.X('channel:N', axis=alt.Axis(labelAngle=0)),
         y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]), scale=alt.Scale(type='symlog')),
         # color='name:N',
         # strokeDash=alt.condition(

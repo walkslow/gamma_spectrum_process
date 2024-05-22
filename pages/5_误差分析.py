@@ -35,7 +35,7 @@ if show_contrast and show_error:
 #     std_data_chart = std_data_chart.loc[:, ['channel', 'K', 'Th', 'U']].melt(id_vars=['channel'], var_name='element',
 #                                                                              value_name='counts')
 #     chart = alt.Chart(std_data_chart).mark_line().encode(
-#         x='channel:N',
+#         x=alt.X('channel:N', axis=alt.Axis(labelAngle=0)),
 #         y=alt.Y('counts', scale=alt.Scale(type=scale_type)),
 #         color='element',
 #     ).properties(

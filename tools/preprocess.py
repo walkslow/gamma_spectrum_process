@@ -124,7 +124,7 @@ def get_spectrum(well_data, well_channel_size, *, depth_counts=-1):
     # st.write("get_spectrum函数里面图表原data是：", df)
     # 创建图表
     chart = alt.Chart(df).mark_line().encode(
-        x='channel:N',
+        x=alt.X('channel:N', axis=alt.Axis(labelAngle=0)),
         y=alt.Y('counts:Q', axis=alt.Axis(title='', orient='right', values=[]), scale=alt.Scale(type='symlog'))
     ).properties(
         width=600,  # 设置图表宽度为600像素
